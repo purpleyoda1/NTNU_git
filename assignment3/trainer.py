@@ -20,20 +20,32 @@ def compute_loss_and_accuracy(
     Returns:
         [average_loss, accuracy]: both scalar.
     """
-    average_loss = 0
-    accuracy = 0
+    #model.eval()
+    total_loss = 0
+    correct = 0
+    samples = 0
+    
     # TODO: Implement this function (Task  2a)
     with torch.no_grad():
         for (X_batch, Y_batch) in dataloader:
             # Transfer images/labels to GPU VRAM, if possible
             X_batch = utils.to_cuda(X_batch)
             Y_batch = utils.to_cuda(Y_batch)
+
             # Forward pass the images through our model
             output_probs = model(X_batch)
 
             # Compute Loss and Accuracy
-
             # Predicted class is the max index over the column dimension
+            loss = loss_criterion(output_probs, Y_batch)
+            total_loss += loss.item() * X_batch.size(0)
+
+            _, predicted_labels = torch.max(output_probs, 1)
+            correct += (predicted_labels == Y_batch).sum().item()
+            samples += X_batch.size(0)
+            
+    average_loss = total_loss/samples
+    accuracy = correct/samples
     return average_loss, accuracy
 
 
@@ -45,7 +57,8 @@ class Trainer:
                  early_stop_count: int,
                  epochs: int,
                  model: torch.nn.Module,
-                 dataloaders: typing.List[torch.utils.data.DataLoader]):
+                 dataloaders: typing.List[torch.utils.data.DataLoader],
+                 l2_regularization: float = 1e-5):
         """
             Initialize our trainer class.
         """
@@ -63,10 +76,12 @@ class Trainer:
         print(self.model)
 
         # Define our optimizer. SGD = Stochastich Gradient Descent
-        self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                         self.learning_rate)
+        self.optimizer = torch.optim.SGD(self.model.parameters(),                               ### OPTIMIZER       ###
+                                         self.learning_rate,
+                                         weight_decay= l2_regularization                        ### REGULARIZATION  ###
+                                         )
 
-        # Load our dataset
+        # Load our dataset  
         self.dataloader_train, self.dataloader_val, self.dataloader_test = dataloaders
 
         # Validate our model everytime we pass through 50% of the dataset

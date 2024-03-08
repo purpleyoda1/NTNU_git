@@ -15,8 +15,13 @@ def calculate_accuracy(X: np.ndarray, targets: np.ndarray, model: BinaryModel) -
     Returns:
         Accuracy (float)
     """
-    # TODO Implement this function (Task 2c)
-    accuracy = 0.0
+    #First get binary predictions, assuming a treshold of 0.5, dont know it that holds up to scrutiny
+    outputs = model.forward(X)
+    pred = outputs >= 0.5
+
+    #Find acc by percentage of correct guesses
+    accuracy = np.sum(targets == pred)/ X.shape[0]
+
     return accuracy
 
 
@@ -34,8 +39,22 @@ class LogisticTrainer(BaseTrainer):
         Returns:
             loss value (float) on batch
         """
-        # TODO: Implement this function (task 2b)
-        loss = 0
+        #Forward pass
+        outputs = self.model.forward(X_batch)
+
+        #Backwards
+        self.model.backward(X_batch, outputs, Y_batch)
+
+        #Calculate loss
+        loss = cross_entropy_loss(Y_batch, outputs)
+
+        #Perform gradient descent step by updating weights
+        self.model.w -= self.learning_rate * self.model.grad
+
+        ###
+        ###print(f"Loss of the current step: {loss}")
+        ###
+
         return loss
 
     def validation_step(self):
@@ -73,6 +92,10 @@ def main():
     X_train, Y_train, X_val, Y_val = utils.load_binary_dataset(
         category1, category2)
 
+    ###
+    ###print(f"{X_train}")
+    ###
+
     X_train = pre_process_images(X_train)
     X_val = pre_process_images(X_val)
 
@@ -86,6 +109,8 @@ def main():
         X_train, Y_train, X_val, Y_val,
     )
     train_history, val_history = trainer.train(num_epochs)
+
+    print(f"X_train\n{X_train}\n\n\n")
 
     # Plot and print everything you want of information
 
@@ -108,7 +133,7 @@ def main():
     plt.show()
 
     # Plot accuracy
-    plt.ylim([0.93, .99])
+    plt.ylim([0.85, .99])
     utils.plot_loss(train_history["accuracy"], "Training Accuracy")
     utils.plot_loss(val_history["accuracy"], "Validation Accuracy")
     plt.xlabel("Number of Training Steps")

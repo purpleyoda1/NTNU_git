@@ -25,6 +25,8 @@ def batch_loader(
     indices = list(range(len(X)))
 
     # TODO (task 2e) implement dataset shuffling here.
+    if (shuffle):
+        np.random.shuffle(indices)
 
     for i in range(num_batches):
         # select a set of indices for each batch of samples
@@ -79,6 +81,8 @@ def load_binary_dataset(class1: int, class2: int):
 
     print(f"Train shape: X: {X_train.shape}, Y: {Y_train.shape}")
     print(f"Validation shape: X: {X_val.shape}, Y: {Y_val.shape}")
+
+    #######print(f"X\n{X_train}\n")
 
     return X_train, Y_train, X_val, Y_val
 

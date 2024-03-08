@@ -7,7 +7,7 @@ from trainer import Trainer
 
 
 class ExampleModel(nn.Module):
-    def __init__(self, image_channels, num_classes):
+    def __init__(self, image_channels, num_classes, kernel_size= 5, use_stride= False, use_batch_norm= False):
         """
         Is called when model is initialized.
         Args:
@@ -16,27 +16,76 @@ class ExampleModel(nn.Module):
         """
         super().__init__()
         # TODO: Implement this function (Task  2a)
-        num_filters = 32  # Set number of filters in first conv layer
+        kernel_size = kernel_size 
+        padding = (kernel_size-1)/2
+        img_size = 32
+        num_filters = 32  # Set number of filters in first conv layer           #####   NUMBER OF FILTERS   #####
         self.num_classes = num_classes
+        conv_stride = 2 if use_stride else 1                                                                                               
         # Define the convolutional layers
-        self.feature_extractor = nn.Sequential(
+        layers = [
             nn.Conv2d(
                 in_channels=image_channels,
                 out_channels=num_filters,
-                kernel_size=5,
-                stride=1,
-                padding=2,
-            )
-        )
+                kernel_size=kernel_size,
+                stride=conv_stride,
+                padding=padding,
+            ),
+            nn.ReLU()
+        ]
+
+        if use_batch_norm:
+            layers.insert(len(layers)-2, nn.BatchNorm2d(num_filters))
+        if not use_stride:
+            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+
+        layers.extend([
+            nn.Conv2d(
+                in_channels=num_filters,
+                out_channels=num_filters*2,
+                kernel_size= kernel_size,
+                stride=conv_stride,
+                padding=padding,
+            ),
+            nn.ReLU()
+        ])
+
+        if use_batch_norm:
+            layers.insert(len(layers)-2, nn.BatchNorm2d(num_filters*2))
+        if not use_stride:
+            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+
+        layers.extend([
+            nn.Conv2d(
+                in_channels=num_filters*2,
+                out_channels=num_filters*4,
+                kernel_size=kernel_size,
+                stride=conv_stride,
+                padding=padding,
+            ),
+            nn.ReLU()
+        ])
+
+        if use_batch_norm:
+            layers.insert(len(layers)-2, nn.BatchNorm2d(num_filters*4))
+        if not use_stride:
+            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+
+        self.feature_extractor = nn.Sequential(*layers)
+        
         # The output of feature_extractor will be [batch_size, num_filters, 16, 16]
-        self.num_output_features = 32 * 32 * 32
+        self.num_output_features = (img_size/(2*2*2))**2 * (num_filters*4)
         # Initialize our last fully connected layer
         # Inputs all extracted features from the convolutional layers
         # Outputs num_classes predictions, 1 for each class.
         # There is no need for softmax activation function, as this is
         # included with nn.CrossEntropyLoss
         self.classifier = nn.Sequential(
-            nn.Linear(self.num_output_features, num_classes),
+            nn.Linear(self.num_output_features, 64),
+            (nn.BatchNormid(64) if use_batch_norm else nn.Identity()),
+            nn.ReLU(),
+            (nn.BatchNormid(num_classes) if use_batch_norm else nn.Identity()),
+            nn.Linear(64, num_classes)
         )
 
     def forward(self, x):
@@ -46,14 +95,22 @@ class ExampleModel(nn.Module):
             x: Input image, shape: [batch_size, 3, 32, 32]
         """
         # TODO: Implement this function (Task  2a)
+        #Take it trough convolution steps
+        x = self.feature_extractor(x)
+
+        #Then the fully connected layers
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
         batch_size = x.shape[0]
-        out = x
+
+        #Check size
+        batch_size = x.shape[0]
         expected_shape = (batch_size, self.num_classes)
-        assert out.shape == (
+        assert x.shape == (
             batch_size,
             self.num_classes,
-        ), f"Expected output of forward pass to be: {expected_shape}, but got: {out.shape}"
-        return out
+        ), f"Expected output of forward pass to be: {expected_shape}, but got: {x.shape}"
+        return x
 
 
 def create_plots(trainer: Trainer, name: str):

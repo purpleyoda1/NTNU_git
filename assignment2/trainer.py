@@ -62,6 +62,7 @@ class BaseTrainer:
         # Utility variables
         num_batches_per_epoch = self.X_train.shape[0] // self.batch_size
         num_steps_per_val = num_batches_per_epoch // 5
+        best_val_loss = 10000000
         # A tracking value of loss over all training steps
         train_history = dict(
             loss={},
@@ -87,6 +88,17 @@ class BaseTrainer:
                     train_history["accuracy"][global_step] = accuracy_train
                     val_history["loss"][global_step] = val_loss
                     val_history["accuracy"][global_step] = accuracy_val
-                    # TODO: Implement early stopping (copy from last assignment)
+                    
+                     #Early stopping
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        steps_since_improvement = 0
+                    else:
+                        steps_since_improvement += 1
+
+                    if steps_since_improvement >= 20:
+                        print(f"Training stopped after {epoch + 1} epochs.")   #+1 since python is 0 indexed or whatever its called
+                        return train_history, val_history
+                    
                 global_step += 1
         return train_history, val_history

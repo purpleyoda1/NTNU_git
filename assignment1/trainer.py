@@ -73,10 +73,18 @@ class BaseTrainer:
         )
 
         global_step = 0
+        #initalize these to help keep track of the improvement
+        best_val_loss = 10000000            #arbitrary large to not stop immediately
+        steps_since_improvement = 0
         for epoch in range(num_epochs):
             train_loader = utils.batch_loader(
                 self.X_train, self.Y_train, self.batch_size, shuffle=self.shuffle_dataset)
             for X_batch, Y_batch in iter(train_loader):
+
+                ###
+                ###print(f"X_batch\n{X_batch}\n\n\nY_batch\n{Y_batch}\n\n\n")
+                ###
+                
                 loss = self.train_step(X_batch, Y_batch)
                 # Track training loss continuously
                 train_history["loss"][global_step] = loss
@@ -88,7 +96,16 @@ class BaseTrainer:
                     val_history["loss"][global_step] = val_loss
                     val_history["accuracy"][global_step] = accuracy_val
 
-                    # TODO (Task 2d): Implement early stopping here.
-                    # You can access the validation loss in val_history["loss"]
+                    #Early stopping
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        steps_since_improvement = 0
+                    else:
+                        steps_since_improvement += 1
+
+                    if steps_since_improvement >= 10:
+                        print(f"Training stopped after {epoch + 1} epochs.")   #+1 since python is 0 indexed or whatever its called
+                        return train_history, val_history
+                    
                 global_step += 1
         return train_history, val_history

@@ -12,7 +12,7 @@ def main():
         f"Expected the vector to be [0,0,0,1,0,0,0,0,0,0], but got {Y}"
 
     X_train, Y_train, *_ = utils.load_full_mnist()
-    X_train = pre_process_images(X_train)
+    X_train = pre_process_images(X_train, X_train)
     Y_train = one_hot_encode(Y_train, 10)
     assert X_train.shape[1] == 785, \
         f"Expected X_train to have 785 elements per image. Shape was: {X_train.shape}"
@@ -22,8 +22,9 @@ def main():
     use_improved_sigmoid = True
     use_improved_weight_init = True
     use_relu = False
+    print_values = False
     model = SoftmaxModel(
-        neurons_per_layer, use_improved_sigmoid, use_improved_weight_init, use_relu)
+        neurons_per_layer, use_improved_sigmoid, use_improved_weight_init, use_relu, print_values)
 
     # Gradient approximation check for 100 images
     X_train = X_train[:100]
